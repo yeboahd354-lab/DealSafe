@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #102a2a;
+  --color-muted: #637777;
+  --color-teal: #0b776d;
+  --color-cream: #f7f9f4;
+  --font-display: "Manrope", sans-serif;
+  --font-sans: "DM Sans", sans-serif;
+}
+
+@layer base {
+  body { @apply m-0 bg-cream font-sans text-ink; }
+  button { @apply font-sans; }
+}
