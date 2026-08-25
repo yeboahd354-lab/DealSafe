@@ -8,7 +8,14 @@ export async function sendDealCreatedEmail({ recipient, recipientName, dealTitle
   });
 
   if (!response.ok) {
-    throw new Error("The deal email could not be sent.");
+    let errorMessage = "The deal email could not be sent.";
+    try {
+      const error = await response.json();
+      if (error?.error) errorMessage = error.error;
+    } catch {
+      // Keep the generic message when the server does not return JSON.
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json();

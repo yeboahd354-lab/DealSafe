@@ -11,6 +11,7 @@ import PayoutSettings from './Pages/PayoutSettings'
 import Profile from './Pages/Profile'
 import Help from './Pages/Help'
 import Payment from './Pages/Payment'
+import Invite from './Pages/Invite'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Navigate } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -22,6 +23,7 @@ function AppRoutes({ user }) {
 
   return (
     <Routes>
+      <Route path="/invite/:transactionCode" element={<Invite />} />
       <Route path="/login" element={signedIn ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/signup" element={signedIn ? <Navigate to="/dashboard" replace /> : <Signup />} />
       <Route path="/dashboard/create-deal" element={signedIn ? <CreateDealPage /> : <Navigate to="/login" replace />} />

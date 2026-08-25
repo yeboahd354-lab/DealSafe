@@ -3,7 +3,14 @@ export default async function handler(request) {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { "Content-Type": "application/json" } });
   }
 
-  const { recipient, recipientName, dealTitle, transactionCode, amount } = await request.json();
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "Request body must be valid JSON." }), { status: 400, headers: { "Content-Type": "application/json" } });
+  }
+
+  const { recipient, recipientName, dealTitle, transactionCode, amount } = payload || {};
   if (!recipient || !dealTitle || !transactionCode) {
     return new Response(JSON.stringify({ error: "Recipient, deal title, and transaction code are required." }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
@@ -23,7 +30,7 @@ export default async function handler(request) {
         from: Netlify.env.get("RESEND_FROM_EMAIL") || "DealSafe <onboarding@resend.dev>",
         to: [recipient],
         subject: `DealSafe invitation: ${transactionCode}`,
-        html: `<div style="font-family:Arial,sans-serif;color:#102a2a;line-height:1.6"><h2>Your DealSafe invitation is ready</h2><p>Hello ${recipientName || "there"},</p><p>You have been invited to review a protected deal for <strong>${dealTitle}</strong>.</p><p><strong>Transaction:</strong> ${transactionCode}<br /><strong>Amount:</strong> ${amount || "See transaction details"}</p><p>Sign in to DealSafe to review the agreement and accept the invitation.</p><p>DealSafe helps keep payments protected until the transaction is completed.</p></div>`,
+        html: `<div style="font-family:Arial,sans-serif;color:#102a2a;line-height:1.6"><h2>Your DealSafe invitation is ready</h2><p>Hello ${recipientName || "there"},</p><p>You have been invited to review a protected deal for <strong>${dealTitle}</strong>.</p><p><strong>Transaction:</strong> ${transactionCode}<br /><strong>Amount:</strong> ${amount || "See transaction details"}</p><p><a href="https://dealsafe.netlify.app/invite/${transactionCode}">Review and accept the invitation</a></p><p>DealSafe helps keep payments protected until the transaction is completed.</p></div>`,
       }),
     });
 

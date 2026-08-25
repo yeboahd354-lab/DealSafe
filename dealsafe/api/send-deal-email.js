@@ -23,7 +23,7 @@ export default async function handler(request, response) {
         from: process.env.RESEND_FROM_EMAIL || "DealSafe <onboarding@resend.dev>",
         to: [recipient],
         subject: `DealSafe invitation: ${transactionCode}`,
-        html: `<div style="font-family:Arial,sans-serif;color:#102a2a;line-height:1.6"><h2>Your DealSafe invitation is ready</h2><p>Hello ${recipientName || "there"},</p><p>You have been invited to review a protected deal for <strong>${dealTitle}</strong>.</p><p><strong>Transaction:</strong> ${transactionCode}<br /><strong>Amount:</strong> ${amount || "See transaction details"}</p><p>Sign in to DealSafe to review the agreement and accept the invitation.</p><p>DealSafe helps keep payments protected until the transaction is completed.</p></div>`,
+        html: `<div style="font-family:Arial,sans-serif;color:#102a2a;line-height:1.6"><h2>Your DealSafe invitation is ready</h2><p>Hello ${recipientName || "there"},</p><p>You have been invited to review a protected deal for <strong>${dealTitle}</strong>.</p><p><strong>Transaction:</strong> ${transactionCode}<br /><strong>Amount:</strong> ${amount || "See transaction details"}</p><p><a href="https://dealsafe.netlify.app/invite/${transactionCode}">Review and accept the invitation</a></p><p>DealSafe helps keep payments protected until the transaction is completed.</p></div>`,
       }),
     });
 

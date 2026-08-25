@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isParticipant() {
+      return signedIn() && (
+        resource.data.creatorId == request.auth.uid ||
+        resource.data.acceptedBy == request.auth.uid
+      );
+    }
+
+    match /invitations/{code} {
+      // The document contains only the safe preview needed before sign-in.
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.code == code
+        && request.resource.data.creatorId == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.creatorId != request.auth.uid
+        && request.resource.data.acceptedBy == request.auth.uid
+        && request.resource.data.dealId == resource.data.dealId
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['acceptedBy', 'acceptedAt', 'status']);
+      allow delete: if false;
+    }
+
+    match /deals/{dealId} {
+      allow create: if signedIn()
+        && request.resource.data.creatorId == request.auth.uid;
+      allow read: if isParticipant();
+      allow update: if isParticipant()
+        || (signedIn()
+          && resource.data.creatorId != request.auth.uid
+          && request.resource.data.acceptedBy == request.auth.uid
+          && request.resource.data.invitationAccepted == true
+          && request.resource.data.status == 'waiting_for_payment'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['invitationAccepted', 'acceptedBy', 'status']));
+      allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.type == 'accepted'
+        && request.resource.data.userId == get(/databases/$(database)/documents/invitations/$(request.resource.data.transactionCode)).data.creatorId
+        && get(/databases/$(database)/documents/invitations/$(request.resource.data.transactionCode)).data.acceptedBy == request.auth.uid;
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if false;
+    }
+  }
+}

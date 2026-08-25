@@ -5,11 +5,14 @@ import {
   Camera,
   Check,
   CircleAlert,
+  Copy,
   ImagePlus,
   Link as LinkIcon,
   LockKeyhole,
   MessageCircle,
+  Music2,
   Plus,
+  Share2,
   ShieldCheck,
   ShoppingBag,
   Store,
@@ -19,7 +22,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "../Components/Dashboard";
 import { auth, db } from "../firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { sendDealCreatedEmail } from "../services/dealEmail";
 
 const initialDeal = {
@@ -694,6 +697,36 @@ function ReviewStep({ deal, setStep, agreements, setAgreements }) {
     </div>
   );
 }
+function ShareActions({ deal, transactionCode }) {
+  const [copied, setCopied] = useState(false);
+  const inviteUrl = `https://dealsafe.netlify.app/invite/${transactionCode}`;
+  const amount = `GHS ${Number(deal.amount).toLocaleString("en-GH", { minimumFractionDigits: 2 })}`;
+  const message = `You have been invited to review a DealSafe transaction for ${deal.title}. Amount: ${amount}. Open the invitation: ${inviteUrl}`;
+  const phone = deal.otherParty.phone.replace(/\D/g, "").replace(/^0/, "233");
+  const copyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch { setCopied(false); }
+  };
+  const shareWithWebShare = async () => {
+    if (navigator.share) await navigator.share({ title: "DealSafe invitation", text: message, url: inviteUrl });
+    else await copyInvite();
+  };
+  return (
+    <div className="mt-6 border-t border-[#edf1ef] pt-6 text-left">
+      <div className="flex items-center gap-2 text-sm font-bold"><Share2 size={16} className="text-[#0b776d]" /> Share invitation</div>
+      <p className="mt-1 text-xs text-[#718580]">Send the secure invitation link to {deal.otherParty.fullName || "the other party"}.</p>
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <a className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#25d366] px-3 py-3 text-xs font-bold text-white" href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer"><MessageCircle size={16} /> WhatsApp</a>
+        <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-black px-3 py-3 text-xs font-bold text-white" type="button" onClick={shareWithWebShare}><Music2 size={16} /> TikTok</button>
+        <a className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1877f2] px-3 py-3 text-xs font-bold text-white" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(inviteUrl)}`} target="_blank" rel="noreferrer"><LinkIcon size={16} /> Facebook</a>
+        <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#bdcec8] px-3 py-3 text-xs font-bold text-[#0b776d]" type="button" onClick={copyInvite}>{copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied" : "Copy link"}</button>
+      </div>
+    </div>
+  );
+}
 function Success({ deal, onReset, transactionId, emailNotice }) {
   return (
     <div className="mx-auto max-w-2xl py-8 text-center">
@@ -717,6 +750,7 @@ function Success({ deal, onReset, transactionId, emailNotice }) {
         <p className="mt-3 text-sm font-bold">
           Waiting for {deal.otherParty.fullName || "the other party"} to accept
         </p>
+        <ShareActions deal={deal} transactionCode={transactionId} />
       </div>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Link
@@ -816,6 +850,17 @@ function CreateDealPage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      await setDoc(doc(db, "invitations", shortCode), {
+        code: shortCode,
+        dealId: dealDocument.id,
+        creatorId: auth.currentUser.uid,
+        title: deal.title,
+        description: deal.description,
+        amount: deal.amount,
+        terms: deal.terms,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      });
       setTransactionId(dealDocument.id);
       setTransactionCode(shortCode);
       if (deal.otherParty.email) {
@@ -823,7 +868,7 @@ function CreateDealPage() {
           await sendDealCreatedEmail({ recipient: deal.otherParty.email, recipientName: deal.otherParty.fullName, dealTitle: deal.title, transactionCode: shortCode, amount: `GHS ${Number(deal.amount).toLocaleString("en-GH", { minimumFractionDigits: 2 })}` });
         } catch (emailError) {
           console.error("Unable to send deal invitation email.", emailError);
-          setEmailNotice("The deal was saved, but the invitation email could not be sent. You can share the transaction details manually.");
+          setEmailNotice(`The deal was saved, but the invitation email could not be sent: ${emailError.message} You can share the transaction details manually.`);
         }
       } else {
         setEmailNotice("The deal was saved. Add the other party's email next time if you want DealSafe to send an invitation automatically.");
