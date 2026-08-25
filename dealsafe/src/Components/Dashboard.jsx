@@ -20,6 +20,7 @@ import {
   Plus,
   Scale,
   Search,
+  ShieldAlert,
   Settings,
   ShieldCheck,
   UserRound,
@@ -89,6 +90,8 @@ function StatusBadge({ status }) {
   );
 }
 function Sidebar({ mobile = false, onClose }) {
+  const isAdmin = auth.currentUser?.email?.toLowerCase() === "yeboahd10@gmail.com";
+  const visibleNavItems = isAdmin ? [...navItems, ["Admin", "/dashboard/admin", ShieldAlert]] : navItems;
   return (
     <aside
       className={`${mobile ? "fixed inset-y-0 left-0 z-30 w-[280px] shadow-2xl" : "hidden w-[252px] shrink-0 border-r border-[#e4ebe8] lg:flex"} flex-col bg-white px-5 py-6`}
@@ -106,7 +109,7 @@ function Sidebar({ mobile = false, onClose }) {
         )}
       </div>
       <nav className="mt-10 grid gap-1">
-        {navItems.map(([label, href, Icon]) => (
+        {visibleNavItems.map(([label, href, Icon]) => (
           <NavLink
             end={href === "/dashboard"}
             onClick={onClose}

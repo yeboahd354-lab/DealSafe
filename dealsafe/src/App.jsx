@@ -12,6 +12,7 @@ import Profile from './Pages/Profile'
 import Help from './Pages/Help'
 import Payment from './Pages/Payment'
 import Invite from './Pages/Invite'
+import Admin from './Pages/Admin'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Navigate } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -20,10 +21,12 @@ import './App.css'
 
 function AppRoutes({ user }) {
   const signedIn = Boolean(user)
+  const isAdmin = user?.email?.toLowerCase() === 'yeboahd10@gmail.com'
 
   return (
     <Routes>
       <Route path="/invite/:transactionCode" element={<Invite />} />
+      <Route path="/dashboard/admin" element={isAdmin ? <Admin /> : <Navigate to="/dashboard" replace />} />
       <Route path="/login" element={signedIn ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/signup" element={signedIn ? <Navigate to="/dashboard" replace /> : <Signup />} />
       <Route path="/dashboard/create-deal" element={signedIn ? <CreateDealPage /> : <Navigate to="/login" replace />} />

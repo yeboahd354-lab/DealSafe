@@ -6,6 +6,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return signedIn() && request.auth.token.email == 'yeboahd10@gmail.com';
+    }
+
     function isParticipant() {
       return signedIn() && (
         resource.data.creatorId == request.auth.uid ||
@@ -32,8 +36,8 @@ service cloud.firestore {
     match /deals/{dealId} {
       allow create: if signedIn()
         && request.resource.data.creatorId == request.auth.uid;
-      allow read: if isParticipant();
-      allow update: if isParticipant()
+      allow read: if isAdmin() || isParticipant();
+      allow update: if isAdmin() || isParticipant()
         || (signedIn()
           && resource.data.creatorId != request.auth.uid
           && request.resource.data.acceptedBy == request.auth.uid
@@ -45,7 +49,15 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /disputes/{disputeId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {
