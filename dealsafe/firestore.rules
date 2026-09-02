@@ -63,9 +63,11 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if signedIn() && resource.data.userId == request.auth.uid;
       allow create: if signedIn()
-        && request.resource.data.type == 'accepted'
-        && request.resource.data.userId == get(/databases/$(database)/documents/invitations/$(request.resource.data.transactionCode)).data.creatorId
-        && get(/databases/$(database)/documents/invitations/$(request.resource.data.transactionCode)).data.acceptedBy == request.auth.uid;
+        && request.resource.data.keys().hasOnly(['userId', 'dealId', 'transactionCode', 'type', 'title', 'message', 'read', 'createdAt'])
+        && request.resource.data.read == false
+        && (isAdmin() || request.resource.data.userId == request.auth.uid
+          || get(/databases/$(database)/documents/deals/$(request.resource.data.dealId)).data.creatorId == request.auth.uid
+          || get(/databases/$(database)/documents/deals/$(request.resource.data.dealId)).data.acceptedBy == request.auth.uid);
       allow update: if signedIn() && resource.data.userId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if false;

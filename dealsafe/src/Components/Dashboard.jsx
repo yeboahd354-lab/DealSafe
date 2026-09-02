@@ -26,7 +26,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
 
@@ -562,7 +562,12 @@ export function DashboardLayout({ children, user = auth.currentUser }) {
 function Dashboard() {
   const [transactions, setTransactions] = useState([]);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [profileName, setProfileName] = useState("");
   useEffect(() => { if (!auth.currentUser) { setLoadingTransactions(false); return undefined; } const unsubscribe = onSnapshot(query(collection(db, "deals"), where("creatorId", "==", auth.currentUser.uid)), (snapshot) => { setTransactions(snapshot.docs.map((document) => { const data = document.data(); const statusLabels = { awaiting_seller: "Waiting for Seller", awaiting_buyer: "Waiting for Buyer", waiting_for_payment: "Waiting for Payment", payment_secured: "Payment Secured", awaiting_delivery: "Awaiting Delivery", awaiting_confirmation: "Awaiting Confirmation", ready_for_release: "Ready for Release", completed: "Completed", disputed: "Disputed", cancelled: "Cancelled", refunded: "Refunded" }; return { ...data, documentId: document.id, id: data.transactionCode || `DS-${document.id.slice(0, 5).toUpperCase()}`, name: data.title || "Untitled deal", role: data.creatorRole === "seller" ? "Seller" : "Buyer", otherParty: typeof data.otherParty === "object" ? data.otherParty?.fullName || "Other party" : data.otherParty || "Other party", amount: `GHS ${Number(data.amount || 0).toLocaleString("en-GH", { minimumFractionDigits: 2 })}`, status: statusLabels[data.status] || data.status || "Awaiting review" }; })); setLoadingTransactions(false); }, () => setLoadingTransactions(false)); return unsubscribe; }, []);
+  useEffect(() => { if (!auth.currentUser) return undefined; getDoc(doc(db, "users", auth.currentUser.uid)).then((snapshot) => { if (snapshot.exists()) setProfileName(snapshot.data().fullName || ""); }).catch(() => {}); return undefined; }, []);
+  const now = new Date();
+  const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 18 ? "Good afternoon" : "Good evening";
+  const userName = profileName || auth.currentUser?.displayName || auth.currentUser?.email?.split("@")[0] || "there";
   const activeTransactions = transactions.filter((transaction) => transaction.status !== "Completed" && transaction.status !== "Cancelled");
   const protectedAmount = activeTransactions.reduce((total, transaction) => total + Number(String(transaction.amount).replace(/[^0-9.]/g, "")), 0);
   const attentionTransaction = activeTransactions[0];
@@ -580,10 +585,10 @@ function Dashboard() {
               <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[1.2px] text-[#0b776d]">
-                    Tuesday, August 24, 2026
+                    {now.toLocaleDateString("en-GH", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
                   </p>
                   <h2 className="mt-2 font-display text-2xl font-bold sm:text-3xl">
-                    Good morning, Daniel <span aria-hidden="true">👋</span>
+                    {greeting}, {userName} <span aria-hidden="true">👋</span>
                   </h2>
                   <p className="mt-2 text-sm text-[#718580]">
                     Here's what's happening with your DealSafe transactions.

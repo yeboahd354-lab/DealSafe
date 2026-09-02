@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, LockKeyhole, ShieldCheck, Smartphone } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { DashboardLayout } from "../Components/Dashboard";
 import { auth, db } from "../firebase";
 
@@ -47,7 +47,7 @@ function Payment() {
       const result = await response.json();
       if (!response.ok || String(result.status) === "0") throw new Error(result.error || result.message || "Moolre status check failed.");
       const status = Number(result.data?.txstatus);
-      if (status === 1) { await updateDoc(doc(db, "deals", transaction.documentId), { status: "payment_secured", paymentProvider: "moolre", paymentReference: externalref, paidBy: auth.currentUser.uid, paidAt: serverTimestamp() }); setPaid(true); setMessage("Payment confirmed by Moolre."); }
+      if (status === 1) { await updateDoc(doc(db, "deals", transaction.documentId), { status: "awaiting_delivery", paymentProvider: "moolre", paymentReference: externalref, paidBy: auth.currentUser.uid, paidAt: serverTimestamp() }); if (transaction.acceptedBy) await addDoc(collection(db, "notifications"), { userId: transaction.creatorRole === "seller" ? transaction.creatorId : transaction.acceptedBy, dealId: transaction.documentId, transactionCode: transaction.transactionCode, type: "payment", title: "Payment secured", message: "The buyer's payment is secured. You can now confirm delivery.", read: false, createdAt: serverTimestamp() }); setPaid(true); setMessage("Payment confirmed by Moolre. The seller can now confirm delivery."); }
       else if (status === 2) setError("Moolre reported that this payment failed. You can start a new payment attempt.");
       else if (status === 0) setMessage("Payment is still pending. Approve the prompt on the phone, then check again.");
       else throw new Error("Moolre returned an unknown payment status.");
