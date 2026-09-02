@@ -255,13 +255,13 @@ function DetailStep({ deal, setDeal, errors }) {
             label="What type of transaction is this?"
             error={errors.dealType}
           >
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
               {["Physical Product", "Service", "Other"].map((type) => (
                 <button
                   type="button"
                   key={type}
                   onClick={() => setDeal({ ...deal, dealType: type })}
-                  className={`rounded-lg border px-2 py-3 text-xs font-bold ${deal.dealType === type ? "border-[#0b776d] bg-[#e8f5ef] text-[#0b776d]" : "border-[#dce7e2] text-[#718580]"}`}
+                  className={`min-w-0 rounded-lg border px-2 py-3 text-xs font-bold ${deal.dealType === type ? "border-[#0b776d] bg-[#e8f5ef] text-[#0b776d]" : "border-[#dce7e2] text-[#718580]"}`}
                 >
                   {type}
                 </button>
@@ -486,7 +486,7 @@ function TermsStep({ deal, setDeal, errors }) {
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="How will the item be delivered?">
             <select
-              className="h-11 rounded-lg border border-[#cbdad4] bg-[#fbfdfb] px-3 text-sm outline-none focus:border-[#0b776d]"
+              className="h-11 w-full min-w-0 rounded-lg border border-[#cbdad4] bg-[#fbfdfb] px-3 text-sm outline-none focus:border-[#0b776d]"
               value={deal.deliveryMethod}
               onChange={(event) =>
                 setDeal({ ...deal, deliveryMethod: event.target.value })
@@ -532,7 +532,7 @@ function TermsStep({ deal, setDeal, errors }) {
             hint="This is stored as part of the terms; no automatic release is triggered."
           >
             <select
-              className="h-11 rounded-lg border border-[#cbdad4] bg-[#fbfdfb] px-3 text-sm outline-none focus:border-[#0b776d]"
+              className="h-11 w-full min-w-0 rounded-lg border border-[#cbdad4] bg-[#fbfdfb] px-3 text-sm outline-none focus:border-[#0b776d]"
               value={deal.inspectionPeriod}
               onChange={(event) =>
                 setDeal({ ...deal, inspectionPeriod: event.target.value })
@@ -727,7 +727,7 @@ function ShareActions({ deal, transactionCode }) {
     </div>
   );
 }
-function Success({ deal, onReset, transactionId, emailNotice }) {
+function Success({ deal, onReset, transactionId }) {
   return (
     <div className="mx-auto max-w-2xl py-8 text-center">
       <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#d9f1e4] text-[#0b776d]">
@@ -743,7 +743,6 @@ function Success({ deal, onReset, transactionId, emailNotice }) {
         We've created the invitation. Your other party can review and accept the
         deal before payment begins.
       </p>
-      {emailNotice && <p className="mx-auto mt-4 max-w-xl rounded-lg bg-[#fff9e8] p-3 text-xs text-[#806f42]">{emailNotice}</p>}
       <div className="mt-7 rounded-xl border border-[#dce7e2] bg-white p-6">
         <p className="text-xs text-[#849691]">Transaction ID</p>
         <strong className="mt-2 block font-display text-2xl">#{transactionId}</strong>
@@ -783,7 +782,6 @@ function CreateDealPage() {
   const [transactionId, setTransactionId] = useState("");
   const [transactionCode, setTransactionCode] = useState("");
   const [saveError, setSaveError] = useState("");
-  const [emailNotice, setEmailNotice] = useState("");
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const validate = () => {
@@ -828,7 +826,6 @@ function CreateDealPage() {
     setTransactionId("");
     setTransactionCode("");
     setSaveError("");
-    setEmailNotice("");
   };
   const createDeal = async () => {
     if (!auth.currentUser) {
@@ -868,10 +865,8 @@ function CreateDealPage() {
           await sendDealCreatedEmail({ recipient: deal.otherParty.email, recipientName: deal.otherParty.fullName, dealTitle: deal.title, transactionCode: shortCode, amount: `GHS ${Number(deal.amount).toLocaleString("en-GH", { minimumFractionDigits: 2 })}` });
         } catch (emailError) {
           console.error("Unable to send deal invitation email.", emailError);
-          setEmailNotice(`The deal was saved, but the invitation email could not be sent: ${emailError.message} You can share the transaction details manually.`);
         }
       } else {
-        setEmailNotice("The deal was saved. Add the other party's email next time if you want DealSafe to send an invitation automatically.");
       }
       setSuccess(true);
     } catch (error) {
@@ -886,7 +881,7 @@ function CreateDealPage() {
     <DashboardLayout title={title}>
       <div className="mx-auto w-full max-w-5xl">
         {success ? (
-          <Success deal={deal} transactionId={transactionCode || transactionId} emailNotice={emailNotice} onReset={reset} />
+          <Success deal={deal} transactionId={transactionCode || transactionId} onReset={reset} />
         ) : (
           <>
             <div className="mb-7 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">

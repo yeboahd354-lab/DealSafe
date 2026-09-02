@@ -146,6 +146,19 @@ function Sidebar({ mobile = false, onClose }) {
 }
 function DashboardNavbar({ onMenu, user }) {
   const displayName = user?.displayName || user?.email || "DealSafe user";
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  useEffect(() => {
+    if (!user?.uid) {
+      setUnreadNotifications(0);
+      return undefined;
+    }
+    const unsubscribe = onSnapshot(
+      query(collection(db, "notifications"), where("userId", "==", user.uid)),
+      (snapshot) => setUnreadNotifications(snapshot.docs.filter((item) => item.data().read !== true).length),
+      () => setUnreadNotifications(0),
+    );
+    return unsubscribe;
+  }, [user?.uid]);
   return (
     <header className="flex h-[76px] items-center justify-between border-b border-[#e4ebe8] bg-white px-5 sm:px-8">
       <div className="flex items-center gap-3">
@@ -159,13 +172,18 @@ function DashboardNavbar({ onMenu, user }) {
         <Logo />
       </div>
       <div className="flex items-center gap-4">
-        <button
+        <Link
+          to="/dashboard/notifications"
           className="relative rounded-lg p-2 text-[#627a75] hover:bg-[#f1f6f3]"
           aria-label="Notifications"
         >
           <Bell size={19} />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#e39b2e] ring-2 ring-white" />
-        </button>
+          {unreadNotifications > 0 && (
+            <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-[#e39b2e] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+              {unreadNotifications > 99 ? "99+" : unreadNotifications}
+            </span>
+          )}
+        </Link>
         <div className="hidden items-center gap-2 border-l border-[#e4ebe8] pl-4 sm:flex">
           <span className="grid h-8 w-8 place-items-center rounded-full bg-[#d8eee4] text-[11px] font-bold text-[#0b776d]">
             {displayName.slice(0, 2).toUpperCase()}
