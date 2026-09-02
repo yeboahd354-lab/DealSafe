@@ -56,7 +56,7 @@ function Payment() {
       const result = await response.json();
       if (!response.ok || String(result.status) === "0") throw new Error(result.message || result.error || "Moolre could not start the payment.");
       setPaymentReference(externalref);
-      if (result.code === "200_OTP_REQ") {
+      if (result.code === "TP14" || result.code === "200_OTP_REQ") {
         setOtpRequired(true);
         setOtpCode("");
         setMessage("Moolre sent a verification code by SMS. Enter it below to continue.");
