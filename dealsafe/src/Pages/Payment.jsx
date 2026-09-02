@@ -20,6 +20,7 @@ function Payment() {
   const [paymentReference, setPaymentReference] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpRequired, setOtpRequired] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
   const [paid, setPaid] = useState(false);
 
   useEffect(() => {
@@ -37,18 +38,31 @@ function Payment() {
   }, [transactionId]);
 
   const checkStatus = async (externalref) => {
-    const response = await fetch("/.netlify/functions/moolre-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "status", externalref }) });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || result.message || "Moolre status check failed.");
-    const status = Number(result.data?.txstatus);
-    if (status === 1) { await updateDoc(doc(db, "deals", transaction.documentId), { status: "payment_secured", paymentProvider: "moolre", paymentReference: externalref, paidBy: auth.currentUser.uid, paidAt: serverTimestamp() }); setPaid(true); setMessage("Payment confirmed by Moolre."); }
-    else if (status === 2) setError("Moolre reported that this payment failed.");
-    else setMessage("Payment is still pending. Approve the prompt on the phone, then check again.");
+    if (!externalref || checkingStatus) return;
+    setCheckingStatus(true);
+    setError("");
+    setMessage("Checking payment status with Moolre...");
+    try {
+      const response = await fetch("/.netlify/functions/moolre-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "status", externalref }) });
+      const result = await response.json();
+      if (!response.ok || String(result.status) === "0") throw new Error(result.error || result.message || "Moolre status check failed.");
+      const status = Number(result.data?.txstatus);
+      if (status === 1) { await updateDoc(doc(db, "deals", transaction.documentId), { status: "payment_secured", paymentProvider: "moolre", paymentReference: externalref, paidBy: auth.currentUser.uid, paidAt: serverTimestamp() }); setPaid(true); setMessage("Payment confirmed by Moolre."); }
+      else if (status === 2) setError("Moolre reported that this payment failed. You can start a new payment attempt.");
+      else if (status === 0) setMessage("Payment is still pending. Approve the prompt on the phone, then check again.");
+      else throw new Error("Moolre returned an unknown payment status.");
+    } catch (statusError) {
+      setMessage("");
+      setError(statusError.message || "We could not check the payment status. Please try again.");
+    } finally {
+      setCheckingStatus(false);
+    }
   };
 
   const startPayment = async (event) => {
     event.preventDefault(); setSubmitting(true); setError(""); setMessage("");
     const externalref = paymentReference || `DS-${transaction.id || transaction.documentId}-${Date.now()}`;
+    const verifyingOtp = otpRequired;
     const paymentPayload = { action: "initiate", payer: normalizePhone(payer), channel, amount: transaction.amount, externalref, reference: `DealSafe ${transaction.id || transaction.documentId}` };
     try {
       if (otpRequired) paymentPayload.otpcode = otpCode.trim();
@@ -60,10 +74,12 @@ function Payment() {
         setOtpRequired(true);
         setOtpCode("");
         setMessage("Moolre sent a verification code by SMS. Enter it below to continue.");
-      } else if (result.code === "200_OTP_SUCCESS") {
+      } else if (verifyingOtp) {
         setOtpRequired(false);
         setOtpCode("");
-        const promptResponse = await fetch("/.netlify/functions/moolre-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...paymentPayload, otpcode: undefined }) });
+        const promptPayload = { ...paymentPayload };
+        delete promptPayload.otpcode;
+        const promptResponse = await fetch("/.netlify/functions/moolre-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(promptPayload) });
         const promptResult = await promptResponse.json();
         if (!promptResponse.ok || String(promptResult.status) === "0") throw new Error(promptResult.message || promptResult.error || "Moolre could not start the payment.");
         setMessage("Verification complete. Approve the payment prompt on the payer's phone, then check payment status.");
