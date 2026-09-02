@@ -19,7 +19,7 @@ MOOLRE_API_PUBKEY=your_public_api_key
 MOOLRE_ACCOUNT_NUMBER=your_moolre_account_number
 ```
 
-6. Redeploy the site. The buyer enters their payer number and network, DealSafe sends the Moolre prompt, and the buyer approves it on the phone.
+6. Redeploy the site. The buyer enters their payer number and network. For a first-time payer, Moolre may send a one-time SMS verification code; enter that code in DealSafe so it can be verified before Moolre sends the payment prompt.
 7. Select **Check payment status** after approval. Only a Moolre response with `data.txstatus` equal to `1` changes the DealSafe transaction to `payment_secured`.
 
 When ready for production, change `MOOLRE_ENVIRONMENT` to `live` and use live API credentials. Do not commit API keys or expose them as `VITE_` variables.
@@ -28,7 +28,7 @@ Official references: [Moolre authentication](https://docs.moolre.com/authenticat
 
 ## Current payment behavior
 
-The integration uses direct debit/USSD prompts and status polling. It does not yet automatically process Moolre webhooks; the buyer must click **Check payment status** after approving the prompt. Moolre's webhook callback can be added after the callback URL and deployment secret are configured in the Moolre API Service.
+The integration uses direct debit/USSD prompts, first-time payer OTP verification, and status polling. It does not yet automatically process Moolre webhooks; the buyer must click **Check payment status** after approving the prompt. Moolre's webhook callback can be added after the callback URL and deployment secret are configured in the Moolre API Service.
 
 ## Original Vite notes
 

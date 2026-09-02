@@ -14,7 +14,18 @@ export default async function handler(request) {
 
   const body = action === "status"
     ? { type: 1, idtype: 1, id: payload.externalref, accountnumber: accountNumber }
-    : { type: 1, channel: payload.channel, currency: "GHS", payer: payload.payer, amount: String(payload.amount), externalref: payload.externalref, reference: payload.reference || "DealSafe escrow payment", accountnumber: accountNumber };
+    : {
+        type: 1,
+        channel: payload.channel,
+        currency: "GHS",
+        payer: payload.payer,
+        amount: String(payload.amount),
+        externalref: payload.externalref,
+        ...(payload.otpcode ? { otpcode: String(payload.otpcode).trim() } : {}),
+        ...(payload.sessionid ? { sessionid: payload.sessionid } : {}),
+        reference: payload.reference || "DealSafe escrow payment",
+        accountnumber: accountNumber,
+      };
   const endpoint = action === "status" ? "/open/transact/status" : "/open/transact/payment";
   try {
     const response = await fetch(`${baseUrl}${endpoint}`, { method: "POST", headers: { "X-API-USER": username, "X-API-PUBKEY": publicKey, "Content-Type": "application/json" }, body: JSON.stringify(body) });
